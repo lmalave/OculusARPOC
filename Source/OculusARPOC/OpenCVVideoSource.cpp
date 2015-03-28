@@ -73,6 +73,14 @@ void  OpenCVVideoSource::SetArucoMarkerDetector(ArucoMarkerDetector* arucoMarker
     this->MarkerDetector = arucoMarkerDetector;
 }
 
+bool  OpenCVVideoSource::IsCameraUpsideDown() {
+	return CameraUpsideDown;
+}
+
+void  OpenCVVideoSource::SetIsCameraUpsideDown(bool cameraUpsideDown) {
+	this->CameraUpsideDown = cameraUpsideDown;
+}
+
 void OpenCVVideoSource::Init() {
     cv::VideoCapture VidCap(CameraIndex);
     this->VideoCapture = VidCap;
@@ -104,7 +112,6 @@ void OpenCVVideoSource::GetFrameImage(uint8* DestinationFrameBuffer) {
     uint8 GreenChannel;
     uint8 BlueChannel;
 
-    bool CameraUpsideDown = true;
 	if (RawFrameBuffer != NULL) {
         if (CameraUpsideDown) { // draw bottom to top and right to left to flip image
             SourcePointer = RawFrameBuffer;

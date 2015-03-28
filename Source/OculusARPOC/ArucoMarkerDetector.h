@@ -20,27 +20,66 @@ public:
     
     cv::vector<aruco::Marker>* GetDetectedMarkers();
     
-    bool IsBoardDetected();
+	bool IsDetected();
 
     aruco::Board* GetDetectedBoard();
 
     FVector GetDetectedBoardTranslation();
 
-    FRotator GetDetectedBoardRotation();
+	FRotator GetDetectedBoardRotation();
+	
+	FVector GetDetectedMarkerTranslation(uint16 markerId);
 
-    FVector GetVectorFromTVec(cv::Mat Tvec);
+	FRotator GetDetectedMarkerRotation(uint16 markerId);
+
+	FVector GetDetectedSingleMarkerTranslation();
+
+	FRotator GetDetectedSingleMarkerRotation();
+	
+	FVector GetDetectedTranslation();
+
+	FRotator GetDetectedRotation();
+
+	FVector GetVectorFromTVec(cv::Mat Tvec);
     
-    FRotator GetRotatorFromRVec(cv::Mat Rvec);
+    FRotator GetBoardRotatorFromRVec(cv::Mat Rvec);
     
-    void Init();
+	FRotator GetMarkerRotatorFromRVec(cv::Mat Rvec);
+
+	FVector GetPlaneMarkersNormalVector();
+
+	FRotator GetPlaneMarkersRotation();
+		
+	FVector GetPlaneMarkersMidpoint();
+
+	void Init();
 
     bool DetectMarkers;
+
+	bool DetectBoard;
+
+	int DetectSingleMarkerId; // if looking for single marker instead of board
+
+	bool DetectPlaneMarkers;
+	int PlaneMarker1Id;
+	int PlaneMarker2Id;
+	int PlaneMarker3Id;
+	int PlaneMarker4Id;
     
-    bool DetectBoard;
-    
+	FVector PlaneMarker1Translation;
+	FVector PlaneMarker2Translation;
+	FVector PlaneMarker3Translation;
+	FVector PlaneMarker4Translation;
+	FRotator PlaneMarker1Rotation;
+	FRotator PlaneMarker2Rotation;
+	FRotator PlaneMarker3Rotation;
+	FRotator PlaneMarker4Rotation;
+
+	bool UseAveragePlaneMarkerRoll; 
+
 protected:
-    
-    aruco::CameraParameters CameraParams;
+   		
+	aruco::CameraParameters CameraParams;
     aruco::MarkerDetector MarkerDetector;
     aruco::BoardConfiguration BoardConfig;
     aruco::BoardDetector BoardDetector;
@@ -51,5 +90,7 @@ protected:
 
     bool MarkersAreDetected;
     
-    bool BoardIsDetected;
+    bool Detected;
+
+	float AveragePlaneMarkerRoll;
 };

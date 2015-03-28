@@ -57,11 +57,12 @@ AOculusARPOCCharacter::AOculusARPOCCharacter(const FObjectInitializer& ObjectIni
 	if (VideoSurfaceBlueprint.Object){
 		VideoSurfaceBlueprintClass = (UClass*)VideoSurfaceBlueprint.Object->GeneratedClass;
 	}
-	static ConstructorHelpers::FObjectFinder<UBlueprint> PropMeshBlueprint(TEXT("Blueprint'/Game/Blueprints/SM_Chair_Blueprint.SM_Chair_Blueprint'"));
+	static ConstructorHelpers::FObjectFinder<UBlueprint> PropMeshBlueprint(TEXT("Blueprint'/Game/Blueprints/CapnBlueprint.CapnBlueprint'"));
 	if (PropMeshBlueprint.Object){
 		PropMeshBlueprintClass = (UClass*)PropMeshBlueprint.Object->GeneratedClass;
 	}
-
+	// Blueprint'/Game/Blueprints/CapnBlueprint.CapnBlueprint'
+	// Blueprint'/Game/Blueprints/CarBlueprint.CarBlueprint'
 
 	// Create a mesh component that will be used when being viewed from a '1st person' view (when controlling this pawn)
 	BackgroundVideoSurface = ObjectInitializer.CreateDefaultSubobject<UChildActorComponent>(this, TEXT("BackgroundVideoSurface"));
@@ -327,12 +328,14 @@ void AOculusARPOCCharacter::HandleMoveWindow() {
 	SelectedUISurfaceActor->SetActorRotation(NewRotation);
 }
 
-void AOculusARPOCCharacter::HandleBoardActor() {
-	//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("In SpawnUIWindowAtBoardLocation()"));
-	if (MarkerDetector->IsBoardDetected()) {
-		FVector DetectedBoardTranslation = MarkerDetector->GetDetectedBoardTranslation();
-		FRotator DetectedBoardRotation = MarkerDetector->GetDetectedBoardRotation();
-		FVector ActorLocation = FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * DetectedBoardTranslation.X + FirstPersonCameraComponent->GetRightVector() * DetectedBoardTranslation.Y + FirstPersonCameraComponent->GetUpVector() * DetectedBoardTranslation.Z;
+void AOculusARPOCCharacter::HandleMarkerActor() {
+	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("In HandleMarkerActor()"));
+	if (MarkerDetector->IsDetected()) {
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Marker condition is detected!"));
+		FVector DetectedTranslation = MarkerDetector->GetDetectedTranslation();
+		FRotator DetectedRotation = MarkerDetector->GetDetectedRotation();
+		GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("DetectedRotation: ") + DetectedRotation.ToCompactString());
+		FVector ActorLocation = FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * DetectedTranslation.X + FirstPersonCameraComponent->GetRightVector() * DetectedTranslation.Y + FirstPersonCameraComponent->GetUpVector() * DetectedTranslation.Z;
 
 		// NOTE: Camera and ShapePlane mesh have different coordinate systems so can't just add rotators
 		// Character:  x = forward, y = right, z = up, Pitch = rotation on Y axis, Yaw = rotation on Z axis, Roll = Rotation on X axis
@@ -347,8 +350,15 @@ void AOculusARPOCCharacter::HandleBoardActor() {
 			ActorRotation = ActorRotation + RotationToFaceCharacter;
 		}
 		if (SpawnedActorFollowsMarkerRotation) {
+			// general definitions:  pitch is rotation on Y axis, yaw is rotation on Z axis, roll is rotation on Y axis
+			// For board: -Y axis points up (z forward and -X to right), so rotating  on vertical axis = rotating on Y axis = pitch  (for character Y = right vector)
 			//FRotator RotationToFollowBoard(-(DetectedBoardRotation.Roll + 180.f),  DetectedBoardRotation.Pitch, DetectedBoardRotation.Yaw * 0.f); // this is for 2D UI surface as well?
-			FRotator RotationToFollowBoard(-DetectedBoardRotation.Yaw + 180.f, DetectedBoardRotation.Pitch + 0.f, -DetectedBoardRotation.Roll); // this is for chair
+			// FRotator RotationToFollowBoard(-DetectedBoardRotation.Yaw + 180.f, DetectedBoardRotation.Pitch + 0.f, -DetectedBoardRotation.Roll); // This is for board marker and chair actor.  X = forward, Y = right, Z = up (like character
+			 //FRotator RotationToFollowBoard(-DetectedRotation.Roll + 180.f, DetectedRotation.Pitch + 0.f, -DetectedRotation.Yaw - 90.f); // This is for board marker and Capn actor. -X = right, Y = forward, Z = up 
+			 //FRotator RotationToFollowBoard(-DetectedRotation.Roll + 180.f, DetectedRotation.Pitch + 0.f, -DetectedRotation.Yaw - 90.f); // This is for plane markers and Capn actor. -X = right, Y = forward, Z = up 
+			 FRotator RotationToFollowBoard(-DetectedRotation.Roll + 180.f, DetectedRotation.Pitch + 90.f, -DetectedRotation.Yaw - 90.f); // This is for plane markers and Capn actor. -X = right, Y = forward, Z = up 
+			 // for single marker: -X axis points up, Z to the right, and Y forward
+			//FRotator RotationToFollowBoard(DetectedBoardRotation.Pitch - 90.f /* roll */, -DetectedBoardRotation.Yaw + 90.f /* yaw */, -DetectedBoardRotation.Roll + 180.f /* pitch */); // This is for board marker and Capn actor. -X = right, Y = forward, Z = up 
 			ActorRotation = ActorRotation + RotationToFollowBoard;
 		}
 		if (BoardFollowActor != NULL) {
@@ -380,11 +390,22 @@ void AOculusARPOCCharacter::BeginPlay()
 {
 	AVideoDisplaySurface* BackgroundVideoDisplaySurface = (AVideoDisplaySurface*)BackgroundVideoSurface->ChildActor;
 	VideoSource = new OpenCVVideoSource(0, 1280, 720);
+	VideoSource->SetIsCameraUpsideDown(false);
 	VideoSource->Init();
 	
 	MarkerDetector = new ArucoMarkerDetector();
 	MarkerDetector->DetectMarkers = true;
-	MarkerDetector->DetectBoard = true;
+	MarkerDetector->DetectSingleMarkerId = -1;
+	///MarkerDetector->PlaneMarker1Id = 985;
+	//MarkerDetector->PlaneMarker2Id = 299;
+	//MarkerDetector->PlaneMarker3Id = 175;
+	//MarkerDetector->PlaneMarker4Id = 461;
+	MarkerDetector->PlaneMarker1Id = 698;
+	MarkerDetector->PlaneMarker2Id = 683;
+	MarkerDetector->PlaneMarker3Id = 795;
+	MarkerDetector->PlaneMarker4Id = 819;
+	MarkerDetector->DetectBoard = false;
+	MarkerDetector->DetectPlaneMarkers = true;
 	MarkerDetector->Init();
 	VideoSource->SetArucoMarkerDetector(MarkerDetector);
 	
@@ -409,7 +430,24 @@ void AOculusARPOCCharacter::Tick(float DeltaTime)
 		HandleLeap();
 		//HandleMarker();
 	}
-	HandleBoardActor(); 
+	HandleMarkerActor(); 
+	//GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("PlaneMarker1Translation: ") + MarkerDetector->PlaneMarker1Translation.ToCompactString());
+	FVector PlaneMarker1Location = GetWorldLocationFromMarkerTranslation(MarkerDetector->PlaneMarker1Translation);
+	FVector PlaneMarker2Location = GetWorldLocationFromMarkerTranslation(MarkerDetector->PlaneMarker2Translation);
+	FVector PlaneMarker3Location = GetWorldLocationFromMarkerTranslation(MarkerDetector->PlaneMarker3Translation);
+	FVector PlaneMarker4Location = GetWorldLocationFromMarkerTranslation(MarkerDetector->PlaneMarker4Translation);
+	DrawDebugSphere(GetWorld(), PlaneMarker1Location, 0.5, 12, FColor::Magenta);
+	DrawDebugSphere(GetWorld(), PlaneMarker2Location, 0.5, 12, FColor::Magenta);
+	DrawDebugSphere(GetWorld(), PlaneMarker3Location, 0.5, 12, FColor::Magenta);
+	DrawDebugSphere(GetWorld(), PlaneMarker4Location, 0.5, 12, FColor::Magenta);
+	FVector CylinderTranslation = MarkerDetector->GetPlaneMarkersMidpoint();
+	FVector CylinderStart = GetWorldLocationFromMarkerTranslation(CylinderTranslation);
+	FVector MarkerNormalVector = MarkerDetector->GetPlaneMarkersNormalVector();
+	FVector CylinderEnd = CylinderStart - FirstPersonCameraComponent->GetForwardVector() * MarkerNormalVector.X + FirstPersonCameraComponent->GetRightVector() * MarkerNormalVector.Y + FirstPersonCameraComponent->GetUpVector() * MarkerNormalVector.Z;
+	FVector CylinderEnd2 = CylinderStart - FirstPersonCameraComponent->GetForwardVector() * MarkerNormalVector.X * 10.f + FirstPersonCameraComponent->GetRightVector() * MarkerNormalVector.Y * 10.f + FirstPersonCameraComponent->GetUpVector() * MarkerNormalVector.Z * 10.f;
+	// draw inner "donut hole" cylinder only in activated case
+	DrawDebugCylinder(GetWorld(), CylinderStart, CylinderEnd, 15.f, 12, FColor::Cyan);
+	DrawDebugCylinder(GetWorld(), CylinderStart, CylinderEnd2, 2.f, 12, FColor::Magenta);
 
 }
 
@@ -450,4 +488,9 @@ FRotator AOculusARPOCCharacter::GetViewRotation() const
 	}
 
 	return GetActorRotation();
+}
+
+FVector AOculusARPOCCharacter::GetWorldLocationFromMarkerTranslation(FVector MarkerTranslation) {
+	FVector Location = FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * MarkerTranslation.X + FirstPersonCameraComponent->GetRightVector() * MarkerTranslation.Y + FirstPersonCameraComponent->GetUpVector() * MarkerTranslation.Z;
+	return Location;
 }

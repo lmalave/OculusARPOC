@@ -57,7 +57,11 @@ public:
 
     virtual void  SetArucoMarkerDetector(ArucoMarkerDetector* arucoMarkerDetector) = 0;
     
-    virtual void Init() = 0;
+	virtual bool  IsCameraUpsideDown() = 0;
+
+	virtual void  SetIsCameraUpsideDown(bool CameraUpsideDown) = 0;
+
+	virtual void Init() = 0;
 
 	virtual void Close() = 0;
 

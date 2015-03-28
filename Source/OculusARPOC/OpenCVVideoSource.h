@@ -57,9 +57,15 @@ public:
     
     void  SetArucoMarkerDetector(ArucoMarkerDetector* arucoMarkerDetector) override;
 
-    void Init() override;
+	bool  IsCameraUpsideDown() override;
+
+	void  SetIsCameraUpsideDown(bool CameraUpsideDown) override;
+
+	void Init() override;
 
 	void Close() override;
+
+	bool CameraUpsideDown;
 
 protected:
     

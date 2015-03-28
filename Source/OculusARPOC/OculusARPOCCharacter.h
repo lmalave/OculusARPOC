@@ -227,10 +227,11 @@ protected:
 
 	void HandleMoveWindow();
 
-	void HandleBoardActor();
+	void HandleMarkerActor();
 
 	FVector LeapPositionToUnrealLocation(Leap::Vector LeapPosition, FVector UnrealOffset);
 
+	FVector AOculusARPOCCharacter::GetWorldLocationFromMarkerTranslation(FVector MarkerTranslation);
 
 	bool BoardWindowIsSpawned;
 
