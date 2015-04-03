@@ -96,18 +96,16 @@ void AOculusARPOCCharacter::SetupPlayerInputComponent(class UInputComponent* Inp
 	// set up gameplay key bindings
 	check(InputComponent);
 
-	InputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
-	InputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
-	
+	InputComponent->BindAction("ResetHMD", IE_Pressed, this, &AOculusARPOCCharacter::ResetHMD);
 	//InputComponent->BindTouch(EInputEvent::IE_Pressed, this, &AOculusARPOCCharacter::TouchStarted);
-	if( EnableTouchscreenMovement(InputComponent) == false )
+	if (EnableTouchscreenMovement(InputComponent) == false)
 	{
 		InputComponent->BindAction("Fire", IE_Pressed, this, &AOculusARPOCCharacter::OnFire);
 	}
-	
+
 	InputComponent->BindAxis("MoveForward", this, &AOculusARPOCCharacter::MoveForward);
 	InputComponent->BindAxis("MoveRight", this, &AOculusARPOCCharacter::MoveRight);
-	
+
 	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
 	// "turn" handles devices that provide an absolute delta, such as a mouse.
 	// "turnrate" is for devices that we choose to treat as a rate of change, such as an analog joystick
@@ -334,32 +332,29 @@ void AOculusARPOCCharacter::HandleMarkerActor() {
 		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Marker condition is detected!"));
 		FVector DetectedTranslation = MarkerDetector->GetDetectedTranslation();
 		FRotator DetectedRotation = MarkerDetector->GetDetectedRotation();
+		FVector DetectedWorldLocation = GetWorldLocationFromMarkerTranslation(DetectedTranslation);
+		FVector MarkerNormalVector = MarkerDetector->GetPlaneMarkersNormalVector();
+		FVector DetectedWorldNormalVector = FirstPersonCameraComponent->GetForwardVector() * MarkerNormalVector.X + FirstPersonCameraComponent->GetRightVector() * MarkerNormalVector.Y + FirstPersonCameraComponent->GetUpVector() * MarkerNormalVector.Z;
+		FRotator DetectedNormalWorldRotation = DetectedWorldNormalVector.Rotation();
 		GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("DetectedRotation: ") + DetectedRotation.ToCompactString());
-		FVector ActorLocation = FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * DetectedTranslation.X + FirstPersonCameraComponent->GetRightVector() * DetectedTranslation.Y + FirstPersonCameraComponent->GetUpVector() * DetectedTranslation.Z;
+		FVector ActorLocation = DetectedWorldLocation;
 
 		// NOTE: Camera and ShapePlane mesh have different coordinate systems so can't just add rotators
 		// Character:  x = forward, y = right, z = up, Pitch = rotation on Y axis, Yaw = rotation on Z axis, Roll = Rotation on X axis
 		// ShapePlane: plane is on "floor" so Z is normal to the plane. Assume textures like UI textures draw with same x/y orientation as browser window
 		// Chair:  x = forward, y = right, z = up, same as character, Pitch = rotation on Y axis, Yaw = rotation on Z axis, Roll = Rotation on X axis
-		// NOTE:  FRotator is (pitch, yaw, roll)
-
-		//FRotator BoardRotation = FRotator(0.f - FirstPersonCameraComponent->GetComponentRotation().Roll - (DetectedBoardRotation.Roll + 180.f), 90.f + FirstPersonCameraComponent->GetComponentRotation().Yaw - DetectedBoardRotation.Yaw * 0.f, 90.f + FirstPersonCameraComponent->GetComponentRotation().Pitch + DetectedBoardRotation.Pitch);
+		// Capn:  y = forward, x = right, z = up
+		// Car: y = forward, x = right, z = up
 		FRotator ActorRotation = FRotator::ZeroRotator;
 		if (SpawnedActorFacesCharacter) {
 			FRotator RotationToFaceCharacter = FRotator(0.f - FirstPersonCameraComponent->GetComponentRotation().Roll, 90.f + FirstPersonCameraComponent->GetComponentRotation().Yaw, 90.f + FirstPersonCameraComponent->GetComponentRotation().Pitch); // NOTE: this is for 2D shape plane mesh!  For other meshes may want different rotation
 			ActorRotation = ActorRotation + RotationToFaceCharacter;
 		}
 		if (SpawnedActorFollowsMarkerRotation) {
-			// general definitions:  pitch is rotation on Y axis, yaw is rotation on Z axis, roll is rotation on Y axis
-			// For board: -Y axis points up (z forward and -X to right), so rotating  on vertical axis = rotating on Y axis = pitch  (for character Y = right vector)
-			//FRotator RotationToFollowBoard(-(DetectedBoardRotation.Roll + 180.f),  DetectedBoardRotation.Pitch, DetectedBoardRotation.Yaw * 0.f); // this is for 2D UI surface as well?
-			// FRotator RotationToFollowBoard(-DetectedBoardRotation.Yaw + 180.f, DetectedBoardRotation.Pitch + 0.f, -DetectedBoardRotation.Roll); // This is for board marker and chair actor.  X = forward, Y = right, Z = up (like character
-			 //FRotator RotationToFollowBoard(-DetectedRotation.Roll + 180.f, DetectedRotation.Pitch + 0.f, -DetectedRotation.Yaw - 90.f); // This is for board marker and Capn actor. -X = right, Y = forward, Z = up 
-			 //FRotator RotationToFollowBoard(-DetectedRotation.Roll + 180.f, DetectedRotation.Pitch + 0.f, -DetectedRotation.Yaw - 90.f); // This is for plane markers and Capn actor. -X = right, Y = forward, Z = up 
-			 FRotator RotationToFollowBoard(-DetectedRotation.Roll + 180.f, DetectedRotation.Pitch + 90.f, -DetectedRotation.Yaw - 90.f); // This is for plane markers and Capn actor. -X = right, Y = forward, Z = up 
-			 // for single marker: -X axis points up, Z to the right, and Y forward
-			//FRotator RotationToFollowBoard(DetectedBoardRotation.Pitch - 90.f /* roll */, -DetectedBoardRotation.Yaw + 90.f /* yaw */, -DetectedBoardRotation.Roll + 180.f /* pitch */); // This is for board marker and Capn actor. -X = right, Y = forward, Z = up 
-			ActorRotation = ActorRotation + RotationToFollowBoard;
+			// For Capn or Car.  NOTE:  Don't know why for Capn seems to be taking absolute value of Yaw (but not for car)   
+			FRotator RotationToFaceCharacter = FRotator(0.f, 90.f, 0.f); // NOTE: this is for Capn or Car mesh!  For other meshes may want different rotation
+			FRotator AdditionalRotation(0.f, -DetectedNormalWorldRotation.Yaw, -DetectedNormalWorldRotation.Pitch);
+			ActorRotation = RotationToFaceCharacter + AdditionalRotation;
 		}
 		if (BoardFollowActor != NULL) {
 			if (SpawnedActorFollowsMarkerLocation) {
@@ -379,7 +374,7 @@ void AOculusARPOCCharacter::HandleMarkerActor() {
 				//NewUISurface->InitializeView();
 				//BoardFollowActor = NewUISurface;
 				AActor* Prop = this->SpawnActor(PropMeshBlueprintClass, ActorLocation, ActorRotation);
-				Prop->SetActorRelativeScale3D(FVector(0.2, 0.2, 0.2));
+				Prop->SetActorRelativeScale3D(FVector(0.05, 0.05, 0.05));
 				BoardFollowActor = Prop;
 			}
 		}
@@ -396,14 +391,16 @@ void AOculusARPOCCharacter::BeginPlay()
 	MarkerDetector = new ArucoMarkerDetector();
 	MarkerDetector->DetectMarkers = true;
 	MarkerDetector->DetectSingleMarkerId = -1;
-	///MarkerDetector->PlaneMarker1Id = 985;
-	//MarkerDetector->PlaneMarker2Id = 299;
-	//MarkerDetector->PlaneMarker3Id = 175;
-	//MarkerDetector->PlaneMarker4Id = 461;
-	MarkerDetector->PlaneMarker1Id = 698;
-	MarkerDetector->PlaneMarker2Id = 683;
-	MarkerDetector->PlaneMarker3Id = 795;
-	MarkerDetector->PlaneMarker4Id = 819;
+	// these below are on the board printout
+	MarkerDetector->PlaneMarker1Id = 985;
+	MarkerDetector->PlaneMarker2Id = 299;
+	MarkerDetector->PlaneMarker3Id = 760;
+	MarkerDetector->PlaneMarker4Id = 977;
+	// these below are the H-U-G-E plane markers
+	//MarkerDetector->PlaneMarker1Id = 698;
+	//MarkerDetector->PlaneMarker2Id = 683;
+	//MarkerDetector->PlaneMarker3Id = 795;
+	//MarkerDetector->PlaneMarker4Id = 819;
 	MarkerDetector->DetectBoard = false;
 	MarkerDetector->DetectPlaneMarkers = true;
 	MarkerDetector->Init();
