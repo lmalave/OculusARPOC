@@ -327,16 +327,18 @@ void AOculusARPOCCharacter::HandleMoveWindow() {
 }
 
 void AOculusARPOCCharacter::HandleMarkerActor() {
-	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("In HandleMarkerActor()"));
+	//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("In HandleMarkerActor()"));
 	if (MarkerDetector->IsDetected()) {
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Marker condition is detected!"));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Marker condition is detected!"));
 		FVector DetectedTranslation = MarkerDetector->GetDetectedTranslation();
+		float markerDistance = DetectedTranslation.Size();
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("===================================================markerDistance: ") + FString::SanitizeFloat(markerDistance));
 		FRotator DetectedRotation = MarkerDetector->GetDetectedRotation();
 		FVector DetectedWorldLocation = GetWorldLocationFromMarkerTranslation(DetectedTranslation);
 		FVector MarkerNormalVector = MarkerDetector->GetPlaneMarkersNormalVector();
 		FVector DetectedWorldNormalVector = FirstPersonCameraComponent->GetForwardVector() * MarkerNormalVector.X + FirstPersonCameraComponent->GetRightVector() * MarkerNormalVector.Y + FirstPersonCameraComponent->GetUpVector() * MarkerNormalVector.Z;
 		FRotator DetectedNormalWorldRotation = DetectedWorldNormalVector.Rotation();
-		GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("DetectedRotation: ") + DetectedRotation.ToCompactString());
+		//GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("DetectedRotation: ") + DetectedRotation.ToCompactString());
 		FVector ActorLocation = DetectedWorldLocation;
 
 		// NOTE: Camera and ShapePlane mesh have different coordinate systems so can't just add rotators
@@ -392,15 +394,15 @@ void AOculusARPOCCharacter::BeginPlay()
 	MarkerDetector->DetectMarkers = true;
 	MarkerDetector->DetectSingleMarkerId = -1;
 	// these below are on the board printout
-	MarkerDetector->PlaneMarker1Id = 985;
-	MarkerDetector->PlaneMarker2Id = 299;
-	MarkerDetector->PlaneMarker3Id = 760;
-	MarkerDetector->PlaneMarker4Id = 977;
+	//MarkerDetector->PlaneMarker1Id = 985;
+	//MarkerDetector->PlaneMarker2Id = 299;
+	//MarkerDetector->PlaneMarker3Id = 760;
+	//MarkerDetector->PlaneMarker4Id = 977;
 	// these below are the H-U-G-E plane markers
-	//MarkerDetector->PlaneMarker1Id = 698;
-	//MarkerDetector->PlaneMarker2Id = 683;
-	//MarkerDetector->PlaneMarker3Id = 795;
-	//MarkerDetector->PlaneMarker4Id = 819;
+	MarkerDetector->PlaneMarker1Id = 666;
+	MarkerDetector->PlaneMarker2Id = 683;
+	MarkerDetector->PlaneMarker3Id = 775;
+	MarkerDetector->PlaneMarker4Id = 819;
 	MarkerDetector->DetectBoard = false;
 	MarkerDetector->DetectPlaneMarkers = true;
 	MarkerDetector->Init();
@@ -409,7 +411,9 @@ void AOculusARPOCCharacter::BeginPlay()
 	BackgroundVideoDisplaySurface->Init(VideoSource);
 	BackgroundVideoSurface->RelativeLocation = FVector(500.f, -0.f, 0.f);
 	BackgroundVideoSurface->RelativeRotation = FRotator(0.f, 90.f, 90.f);
-	BackgroundVideoSurface->RelativeScale3D = FVector(8.89, 5.00, 1.0); // This is for 1280x720
+	BackgroundVideoSurface->RelativeScale3D = FVector(8.00, 4.50, 1.0); // This is for 1280x720
+	//BackgroundVideoSurface->RelativeScale3D = FVector(7.11, 4.00, 1.0); // This is for 1280x720
+	//BackgroundVideoSurface->RelativeScale3D = FVector(5.33, 3.00, 1.0); // This is for 1280x720
 	LeapController = new Leap::Controller();
 	LeapController->setPolicy(Leap::Controller::POLICY_OPTIMIZE_HMD);
 	LeapInput = new LeapInputReader(LeapController, this);
@@ -488,6 +492,6 @@ FRotator AOculusARPOCCharacter::GetViewRotation() const
 }
 
 FVector AOculusARPOCCharacter::GetWorldLocationFromMarkerTranslation(FVector MarkerTranslation) {
-	FVector Location = FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * MarkerTranslation.X + FirstPersonCameraComponent->GetRightVector() * MarkerTranslation.Y + FirstPersonCameraComponent->GetUpVector() * MarkerTranslation.Z;
+	FVector Location = FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * MarkerTranslation.X - FirstPersonCameraComponent->GetRightVector() * MarkerTranslation.Y - FirstPersonCameraComponent->GetUpVector() * MarkerTranslation.Z;
 	return Location;
 }

@@ -64,8 +64,8 @@ void ArucoMarkerDetector::ProcessMarkerDetection(cv::Mat Frame) {
 			//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Found Marker: ") + FString::FromInt(this->DetectedMarkers[i].id));
 			float markerSize = 0.034;
 			int markerId = this->DetectedMarkers[i].id;
-			if (markerId == 698 || markerId == 683 || markerId == 795 || markerId == 819)  {
-				markerSize = 0.1056;
+			if (markerId == 666 || markerId == 683 || markerId == 775 || markerId == 819)  {
+				markerSize = 0.176;
 			}
 			this->DetectedMarkers[i].calculateExtrinsics(markerSize, CameraParams);
 			if (this->DetectedMarkers[i].id == DetectSingleMarkerId) {
@@ -105,7 +105,7 @@ void ArucoMarkerDetector::ProcessMarkerDetection(cv::Mat Frame) {
 					AveragePlaneMarkerRoll += PlaneMarker4Rotation.Roll;
 					numPlaneMarkersDetected++;
 				}
-				GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("numPlaneMarkersDetected: ") + FString::FromInt(numPlaneMarkersDetected));
+				//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("numPlaneMarkersDetected: ") + FString::FromInt(numPlaneMarkersDetected));
 			}
 			//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Found Marker!!"));
 			this->DetectedMarkers[i].draw(Frame, cv::Scalar(0, 0, 255), 2);
@@ -118,7 +118,7 @@ void ArucoMarkerDetector::ProcessMarkerDetection(cv::Mat Frame) {
 			//aruco::CvDrawingUtils::draw3dCube(Frame, this->DetectedMarkers[i], CameraParams); 
 		}
 		AveragePlaneMarkerRoll = AveragePlaneMarkerRoll / numPlaneMarkersDetected;
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("AveragePlaneMarkerRoll: ") + FString::SanitizeFloat(AveragePlaneMarkerRoll));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("AveragePlaneMarkerRoll: ") + FString::SanitizeFloat(AveragePlaneMarkerRoll));
 		if (numPlaneMarkersDetected >= 3) {
 			Detected = true;
 		}
