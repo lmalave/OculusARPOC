@@ -3,6 +3,7 @@
 #include "OculusARPOC.h"
 #include "OculusARPOCGameMode.h"
 #include "OculusARPOCHUD.h"
+#include "OculusARPOCPlayerController.h"
 #include "OculusARPOCCharacter.h"
 
 AOculusARPOCGameMode::AOculusARPOCGameMode(const FObjectInitializer& ObjectInitializer)
@@ -11,6 +12,7 @@ AOculusARPOCGameMode::AOculusARPOCGameMode(const FObjectInitializer& ObjectIniti
 	// set default pawn class to our Blueprinted character
 	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnClassFinder(TEXT("/Game/FirstPerson/Blueprints/FirstPersonCharacter"));
 	DefaultPawnClass = PlayerPawnClassFinder.Class;
+	PlayerControllerClass = AOculusARPOCPlayerController::StaticClass();
 
 	// use our custom HUD class
 	HUDClass = AOculusARPOCHUD::StaticClass();

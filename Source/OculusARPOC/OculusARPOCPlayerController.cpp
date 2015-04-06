@@ -35,6 +35,7 @@ void AOculusARPOCPlayerController::UpdateRotation(float DeltaTime)
 			GEngine->HMDDevice->GetCurrentOrientationAndPosition(HMDOrientation, HMDPosition);
 
 			FRotator NewViewRotation = HMDOrientation.Rotator();
+			GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("===========================================HMD Rotation: ") + NewViewRotation.ToCompactString());
 
 			// Only keep the yaw component from the controller.
 			NewViewRotation.Yaw += NewControlRotation.Yaw;

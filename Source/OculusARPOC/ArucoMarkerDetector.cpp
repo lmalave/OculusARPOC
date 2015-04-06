@@ -70,11 +70,11 @@ void ArucoMarkerDetector::ProcessMarkerDetection(cv::Mat Frame) {
 			this->DetectedMarkers[i].calculateExtrinsics(markerSize, CameraParams);
 			if (this->DetectedMarkers[i].id == DetectSingleMarkerId) {
 				Detected = true;
-				aruco::CvDrawingUtils::draw3dAxis(Frame, this->DetectedMarkers[i], CameraParams);
+				//aruco::CvDrawingUtils::draw3dAxis(Frame, this->DetectedMarkers[i], CameraParams);
 			}
 			if (this->DetectPlaneMarkers) {
 				if (this->DetectedMarkers[i].id == PlaneMarker1Id) {
-					aruco::CvDrawingUtils::draw3dAxis(Frame, this->DetectedMarkers[i], CameraParams);
+					//aruco::CvDrawingUtils::draw3dAxis(Frame, this->DetectedMarkers[i], CameraParams);
 					PlaneMarker1Translation = GetVectorFromTVec(this->DetectedMarkers[i].Tvec);
 					//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("PlaneMarker1Translation: ") + PlaneMarker1Translation.ToCompactString());
 					PlaneMarker1Rotation = GetMarkerRotatorFromRVec(this->DetectedMarkers[i].Rvec);
@@ -82,7 +82,7 @@ void ArucoMarkerDetector::ProcessMarkerDetection(cv::Mat Frame) {
 					numPlaneMarkersDetected++;
 				}
 				else if (this->DetectedMarkers[i].id == PlaneMarker2Id) {
-					aruco::CvDrawingUtils::draw3dAxis(Frame, this->DetectedMarkers[i], CameraParams);
+					//aruco::CvDrawingUtils::draw3dAxis(Frame, this->DetectedMarkers[i], CameraParams);
 					PlaneMarker2Translation = GetVectorFromTVec(this->DetectedMarkers[i].Tvec);
 					//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("PlaneMarker2Translation: ") + PlaneMarker2Translation.ToCompactString());
 					PlaneMarker2Rotation = GetMarkerRotatorFromRVec(this->DetectedMarkers[i].Rvec);
@@ -90,7 +90,7 @@ void ArucoMarkerDetector::ProcessMarkerDetection(cv::Mat Frame) {
 					numPlaneMarkersDetected++;
 				}
 				else if (this->DetectedMarkers[i].id == PlaneMarker3Id) {
-					aruco::CvDrawingUtils::draw3dAxis(Frame, this->DetectedMarkers[i], CameraParams);
+					//aruco::CvDrawingUtils::draw3dAxis(Frame, this->DetectedMarkers[i], CameraParams);
 					PlaneMarker3Translation = GetVectorFromTVec(this->DetectedMarkers[i].Tvec);
 					//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("PlaneMarker3Translation: ") + PlaneMarker3Translation.ToCompactString());
 					PlaneMarker3Rotation = GetMarkerRotatorFromRVec(this->DetectedMarkers[i].Rvec);
@@ -98,7 +98,7 @@ void ArucoMarkerDetector::ProcessMarkerDetection(cv::Mat Frame) {
 					numPlaneMarkersDetected++;
 				}
 				else if (this->DetectedMarkers[i].id == PlaneMarker4Id) {
-					aruco::CvDrawingUtils::draw3dAxis(Frame, this->DetectedMarkers[i], CameraParams);
+					//aruco::CvDrawingUtils::draw3dAxis(Frame, this->DetectedMarkers[i], CameraParams);
 					PlaneMarker4Translation = GetVectorFromTVec(this->DetectedMarkers[i].Tvec);
 					//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("PlaneMarker4Translation: ") + PlaneMarker4Translation.ToCompactString());
 					PlaneMarker4Rotation = GetMarkerRotatorFromRVec(this->DetectedMarkers[i].Rvec);
@@ -126,7 +126,7 @@ void ArucoMarkerDetector::ProcessMarkerDetection(cv::Mat Frame) {
             float probDetect= BoardDetector.detect( this->DetectedMarkers, BoardConfig,this->DetectedBoard, CameraParams,0.034);
             if (probDetect > 0.f) {
 				Detected = true;
-				aruco::CvDrawingUtils::draw3dAxis(Frame,this->DetectedBoard,CameraParams);
+				//aruco::CvDrawingUtils::draw3dAxis(Frame,this->DetectedBoard,CameraParams);
                 FVector TranslationVector(this->DetectedBoard.Tvec.at<float>(0,0), this->DetectedBoard.Tvec.at<float>(1,0), this->DetectedBoard.Tvec.at<float>(2,0));
                 FVector RotationVector(this->DetectedBoard.Rvec.at<float>(0,0), this->DetectedBoard.Rvec.at<float>(1,0), this->DetectedBoard.Rvec.at<float>(2,0));
                 //GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("TranslationVector: ") + TranslationVector.ToString());

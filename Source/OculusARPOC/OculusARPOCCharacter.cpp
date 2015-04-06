@@ -63,7 +63,10 @@ AOculusARPOCCharacter::AOculusARPOCCharacter(const FObjectInitializer& ObjectIni
 	}
 	// Blueprint'/Game/Blueprints/CapnBlueprint.CapnBlueprint'
 	// Blueprint'/Game/Blueprints/CarBlueprint.CarBlueprint'
-
+	static ConstructorHelpers::FObjectFinder<UBlueprint> PortalBlueprint(TEXT("Blueprint'/Game/Blueprints/SM_DoorFrame_BP.SM_DoorFrame_BP'"));
+	if (PortalBlueprint.Object){
+		PortalBlueprintClass = (UClass*)PortalBlueprint.Object->GeneratedClass;
+	}
 	// Create a mesh component that will be used when being viewed from a '1st person' view (when controlling this pawn)
 	BackgroundVideoSurface = ObjectInitializer.CreateDefaultSubobject<UChildActorComponent>(this, TEXT("BackgroundVideoSurface"));
 	BackgroundVideoSurface->AttachParent = FirstPersonCameraComponent;
@@ -85,7 +88,9 @@ AOculusARPOCCharacter::AOculusARPOCCharacter(const FObjectInitializer& ObjectIni
 	SpawnActorAtMarker = true;
 	SpawnedActorFacesCharacter = true;
 	SpawnedActorFollowsMarkerLocation = true;
-	SpawnedActorFollowsMarkerRotation = true;
+	SpawnedActorFollowsMarkerRotation = true; 
+
+	ARStarted = false;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -254,6 +259,28 @@ bool AOculusARPOCCharacter::EnableTouchscreenMovement(class UInputComponent* Inp
 	return bResult;
 }
 
+FRotator AOculusARPOCCharacter::GetViewRotation() const
+{
+	if (AOculusARPOCPlayerController* MYPC = Cast<AOculusARPOCPlayerController>(Controller))
+	{
+		return MYPC->GetViewRotation();
+	}
+	else if (Role < ROLE_Authority)
+	{
+		// check if being spectated
+		for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
+		{
+			APlayerController* PlayerController = *Iterator;
+			if (PlayerController && PlayerController->PlayerCameraManager->GetViewTargetPawn() == this)
+			{
+				return PlayerController->BlendedTargetViewRotation;
+			}
+		}
+	}
+
+	return GetActorRotation();
+}
+
 void AOculusARPOCCharacter::ResetHMD()
 {
 	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("================================================Resetting HMD"));
@@ -332,7 +359,6 @@ void AOculusARPOCCharacter::HandleMarkerActor() {
 		//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Marker condition is detected!"));
 		FVector DetectedTranslation = MarkerDetector->GetDetectedTranslation();
 		float markerDistance = DetectedTranslation.Size();
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("===================================================markerDistance: ") + FString::SanitizeFloat(markerDistance));
 		FRotator DetectedRotation = MarkerDetector->GetDetectedRotation();
 		FVector DetectedWorldLocation = GetWorldLocationFromMarkerTranslation(DetectedTranslation);
 		FVector MarkerNormalVector = MarkerDetector->GetPlaneMarkersNormalVector();
@@ -386,7 +412,7 @@ void AOculusARPOCCharacter::HandleMarkerActor() {
 void AOculusARPOCCharacter::BeginPlay()
 {
 	AVideoDisplaySurface* BackgroundVideoDisplaySurface = (AVideoDisplaySurface*)BackgroundVideoSurface->ChildActor;
-	VideoSource = new OpenCVVideoSource(0, 1280, 720);
+	VideoSource = new OpenCVVideoSource(1, 1280, 720);
 	VideoSource->SetIsCameraUpsideDown(false);
 	VideoSource->Init();
 	
@@ -431,7 +457,7 @@ void AOculusARPOCCharacter::Tick(float DeltaTime)
 		HandleLeap();
 		//HandleMarker();
 	}
-	HandleMarkerActor(); 
+	//HandleMarkerActor(); 
 	//GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("PlaneMarker1Translation: ") + MarkerDetector->PlaneMarker1Translation.ToCompactString());
 	FVector PlaneMarker1Location = GetWorldLocationFromMarkerTranslation(MarkerDetector->PlaneMarker1Translation);
 	FVector PlaneMarker2Location = GetWorldLocationFromMarkerTranslation(MarkerDetector->PlaneMarker2Translation);
@@ -442,14 +468,19 @@ void AOculusARPOCCharacter::Tick(float DeltaTime)
 	DrawDebugSphere(GetWorld(), PlaneMarker3Location, 0.5, 12, FColor::Magenta);
 	DrawDebugSphere(GetWorld(), PlaneMarker4Location, 0.5, 12, FColor::Magenta);
 	FVector CylinderTranslation = MarkerDetector->GetPlaneMarkersMidpoint();
+	FRotator MarkerRotation = CylinderTranslation.Rotation();
+	GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("===========================================MarkerTranslation: ") + CylinderTranslation.ToCompactString());
+	GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("===========================================MarkerRotation: ") + MarkerRotation.ToCompactString());
 	FVector CylinderStart = GetWorldLocationFromMarkerTranslation(CylinderTranslation);
+	DrawDebugSphere(GetWorld(), CylinderStart, 0.5, 12, FColor::Red);
 	FVector MarkerNormalVector = MarkerDetector->GetPlaneMarkersNormalVector();
 	FVector CylinderEnd = CylinderStart - FirstPersonCameraComponent->GetForwardVector() * MarkerNormalVector.X + FirstPersonCameraComponent->GetRightVector() * MarkerNormalVector.Y + FirstPersonCameraComponent->GetUpVector() * MarkerNormalVector.Z;
 	FVector CylinderEnd2 = CylinderStart - FirstPersonCameraComponent->GetForwardVector() * MarkerNormalVector.X * 10.f + FirstPersonCameraComponent->GetRightVector() * MarkerNormalVector.Y * 10.f + FirstPersonCameraComponent->GetUpVector() * MarkerNormalVector.Z * 10.f;
 	// draw inner "donut hole" cylinder only in activated case
-	DrawDebugCylinder(GetWorld(), CylinderStart, CylinderEnd, 15.f, 12, FColor::Cyan);
-	DrawDebugCylinder(GetWorld(), CylinderStart, CylinderEnd2, 2.f, 12, FColor::Magenta);
-
+	//DrawDebugCylinder(GetWorld(), CylinderStart, CylinderEnd, 15.f, 12, FColor::Cyan);
+	//DrawDebugCylinder(GetWorld(), CylinderStart, CylinderEnd2, 2.f, 12, FColor::Magenta);
+	DrawDebugLine(GetWorld(), FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * 50 + FirstPersonCameraComponent->GetRightVector() * 50, FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * 100 + FirstPersonCameraComponent->GetRightVector() * 100, FColor::Red);
+	DrawDebugLine(GetWorld(), FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * 50 - FirstPersonCameraComponent->GetRightVector() * 50, FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * 100 - FirstPersonCameraComponent->GetRightVector() * 100, FColor::Red);
 }
 
 void AOculusARPOCCharacter::HandleLeap()
@@ -468,30 +499,52 @@ void AOculusARPOCCharacter::HandleLeap()
 	}
 }
 
-
-FRotator AOculusARPOCCharacter::GetViewRotation() const
+FVector AOculusARPOCCharacter::GetWorldLocationFromMarkerTranslation(FVector MarkerTranslation)
 {
-	if (AOculusARPOCPlayerController* MYPC = Cast<AOculusARPOCPlayerController>(Controller))
-	{
-		return MYPC->GetViewRotation();
-	}
-	else if (Role < ROLE_Authority)
-	{
-		// check if being spectated
-		for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
-		{
-			APlayerController* PlayerController = *Iterator;
-			if (PlayerController && PlayerController->PlayerCameraManager->GetViewTargetPawn() == this)
-			{
-				return PlayerController->BlendedTargetViewRotation;
-			}
-		}
-	}
-
-	return GetActorRotation();
-}
-
-FVector AOculusARPOCCharacter::GetWorldLocationFromMarkerTranslation(FVector MarkerTranslation) {
 	FVector Location = FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * MarkerTranslation.X - FirstPersonCameraComponent->GetRightVector() * MarkerTranslation.Y - FirstPersonCameraComponent->GetUpVector() * MarkerTranslation.Z;
 	return Location;
 }
+
+void AOculusARPOCCharacter::StartAR()
+{
+	ARStarted = true;
+	//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("In HandleMarkerActor()"));
+	if (MarkerDetector->IsDetected()) {
+		//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Marker condition is detected!"));
+		FVector DetectedTranslation = MarkerDetector->GetDetectedTranslation();
+		float markerDistance = DetectedTranslation.Size();
+		FRotator DetectedRotation = MarkerDetector->GetDetectedRotation();
+		FVector DetectedWorldLocation = GetWorldLocationFromMarkerTranslation(DetectedTranslation);
+		FVector MarkerNormalVector = MarkerDetector->GetPlaneMarkersNormalVector();
+		FVector DetectedWorldNormalVector = FirstPersonCameraComponent->GetForwardVector() * MarkerNormalVector.X + FirstPersonCameraComponent->GetRightVector() * MarkerNormalVector.Y + FirstPersonCameraComponent->GetUpVector() * MarkerNormalVector.Z;
+		FRotator DetectedNormalWorldRotation = DetectedWorldNormalVector.Rotation();
+		//GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("DetectedRotation: ") + DetectedRotation.ToCompactString());
+		FVector ActorLocation = DetectedWorldLocation;
+
+		// NOTE: Camera and ShapePlane mesh have different coordinate systems so can't just add rotators
+		// Character:  x = forward, y = right, z = up, Pitch = rotation on Y axis, Yaw = rotation on Z axis, Roll = Rotation on X axis
+		// ShapePlane: plane is on "floor" so Z is normal to the plane. Assume textures like UI textures draw with same x/y orientation as browser window
+		// Chair:  x = forward, y = right, z = up, same as character, Pitch = rotation on Y axis, Yaw = rotation on Z axis, Roll = Rotation on X axis
+		// Capn:  y = forward, x = right, z = up
+		// Car: y = forward, x = right, z = up
+		// For Capn or Car.  NOTE:  Don't know why for Capn seems to be taking absolute value of Yaw (but not for car)   
+		FRotator RotationToFaceCharacter = FRotator(0.f, 90.f, 0.f); // NOTE: this is for Capn or Car mesh!  For other meshes may want different rotation
+		FRotator AdditionalRotation(0.f, -DetectedNormalWorldRotation.Yaw, -DetectedNormalWorldRotation.Pitch);
+		FRotator ActorRotation = RotationToFaceCharacter + AdditionalRotation;
+		GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("About to spawn actor at location: ") + ActorLocation.ToCompactString() + TEXT(", rotation: ") + ActorRotation.ToCompactString());
+		//AUISurfaceActor* NewUISurface = (AUISurfaceActor*)this->SpawnActor(UISurfaceBlueprintClass, ActorLocation, ActorRotation);
+		//NewUISurface->SetActorRelativeScale3D(FVector(0.2, 0.2, 0.f));
+		//NewUISurface->CoherentUIViewURL = TEXT("http://www.google.com");
+		//NewUISurface->CoherentUIViewPixelWidth = 1024;
+		//NewUISurface->InitializeView();
+		//BoardFollowActor = NewUISurface;
+		AActor* Prop = this->SpawnActor(PropMeshBlueprintClass, ActorLocation, ActorRotation);
+		Prop->SetActorRelativeScale3D(FVector(0.10, 0.10, 0.10));
+		BoardFollowActor = Prop;
+		AActor* Portal = this->SpawnActor(PortalBlueprintClass, FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * markerDistance * 0.5, FRotator::ZeroRotator);
+		Portal->SetActorRelativeScale3D(FVector(1.0, 1.0, 1.0));
+		BoardFollowActor = Prop;
+	}
+}
+
+

@@ -35,6 +35,8 @@ class AOculusARPOCCharacter : public ACharacter
 
 	UClass* PropMeshBlueprintClass;
 
+	UClass* PortalBlueprintClass;
+
 	FDateTime LastMarkerSpawnTime;
 
 	IVideoSource* VideoSource;
@@ -148,6 +150,8 @@ public:
 
 public:
 
+	virtual FRotator GetViewRotation() const override;
+
 	UFUNCTION(BlueprintCallable, Category = Camera)
 		void ResetHMD();
 
@@ -166,6 +170,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = CoherentUI)
 		void HandleZoomOutWindow();
 
+	UFUNCTION(BlueprintCallable, Category = Aruco)
+		void StartAR();
 
 protected:
 	
@@ -221,8 +227,6 @@ protected:
 
 	virtual void Tick(float DeltaTime) override;
 
-	virtual FRotator GetViewRotation() const override;
-
 	void HandleLeap();
 
 	void HandleMoveWindow();
@@ -231,11 +235,11 @@ protected:
 
 	FVector LeapPositionToUnrealLocation(Leap::Vector LeapPosition, FVector UnrealOffset);
 
-	FVector AOculusARPOCCharacter::GetWorldLocationFromMarkerTranslation(FVector MarkerTranslation);
+	FVector GetWorldLocationFromMarkerTranslation(FVector MarkerTranslation);
 
 	bool BoardWindowIsSpawned;
 
-
+	bool ARStarted;
 public:
 	/** Returns Mesh1P subobject **/
 	FORCEINLINE class USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
