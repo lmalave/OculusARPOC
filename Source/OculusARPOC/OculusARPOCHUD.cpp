@@ -2,6 +2,7 @@
 
 #include "OculusARPOC.h"
 #include "OculusARPOCHUD.h"
+#include "Engine.h"
 #include "Engine/Canvas.h"
 #include "TextureResource.h"
 #include "CanvasItem.h"
@@ -31,5 +32,28 @@ void AOculusARPOCHUD::DrawHUD()
 	FCanvasTileItem TileItem( CrosshairDrawPosition, CrosshairTex->Resource, FLinearColor::White);
 	TileItem.BlendMode = SE_BLEND_Translucent;
 	Canvas->DrawItem( TileItem );
+
+	if (GEngine->HMDDevice.IsValid()) {
+		FColor BorderColor(50, 50, 50);
+		float BorderTopBottomThickness = 720.0; // best for 1280x720 with screen at 5m distance and 4.5 m height
+		float BorderLeftRightThickness = 130.0; // best for 1280x720 with screen at 5m distance and 4.5m height
+
+		FCanvasLineItem TopBorder(FVector2D(0, 0), FVector2D(Canvas->ClipX, 0));
+		TopBorder.SetColor(BorderColor);
+		TopBorder.LineThickness = BorderTopBottomThickness;
+		FCanvasLineItem BottomBorder(FVector2D(0, Canvas->ClipY), FVector2D(Canvas->ClipX, Canvas->ClipY));
+		BottomBorder.SetColor(BorderColor);
+		BottomBorder.LineThickness = BorderTopBottomThickness;
+		FCanvasLineItem LeftBorder(FVector2D(0, 0), FVector2D(0, Canvas->ClipY));
+		LeftBorder.SetColor(BorderColor);
+		LeftBorder.LineThickness = BorderLeftRightThickness;
+		FCanvasLineItem RightBorder(FVector2D(Canvas->ClipX, 0), FVector2D(Canvas->ClipX, Canvas->ClipY));
+		RightBorder.SetColor(BorderColor);
+		RightBorder.LineThickness = BorderLeftRightThickness;
+		Canvas->DrawItem(TopBorder);
+		Canvas->DrawItem(BottomBorder);
+		Canvas->DrawItem(LeftBorder);
+		Canvas->DrawItem(RightBorder);
+	}
 }
 

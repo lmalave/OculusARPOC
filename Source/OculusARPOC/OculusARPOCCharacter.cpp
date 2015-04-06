@@ -507,9 +507,9 @@ FVector AOculusARPOCCharacter::GetWorldLocationFromMarkerTranslation(FVector Mar
 
 void AOculusARPOCCharacter::StartAR()
 {
-	ARStarted = true;
 	//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("In HandleMarkerActor()"));
-	if (MarkerDetector->IsDetected()) {
+	if (!ARStarted && MarkerDetector->IsDetected()) {
+		ARStarted = true;
 		//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Marker condition is detected!"));
 		FVector DetectedTranslation = MarkerDetector->GetDetectedTranslation();
 		float markerDistance = DetectedTranslation.Size();
@@ -541,7 +541,7 @@ void AOculusARPOCCharacter::StartAR()
 		AActor* Prop = this->SpawnActor(PropMeshBlueprintClass, ActorLocation, ActorRotation);
 		Prop->SetActorRelativeScale3D(FVector(0.10, 0.10, 0.10));
 		BoardFollowActor = Prop;
-		AActor* Portal = this->SpawnActor(PortalBlueprintClass, FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * markerDistance * 0.5, FRotator::ZeroRotator);
+		AActor* Portal = this->SpawnActor(PortalBlueprintClass, FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * markerDistance * 0.5 - FirstPersonCameraComponent->GetUpVector() * 100.f, FRotator::ZeroRotator);
 		Portal->SetActorRelativeScale3D(FVector(1.0, 1.0, 1.0));
 		BoardFollowActor = Prop;
 	}
