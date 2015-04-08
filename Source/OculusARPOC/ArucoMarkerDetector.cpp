@@ -211,7 +211,7 @@ FRotator ArucoMarkerDetector::GetDetectedRotation() {
 
 
 FVector ArucoMarkerDetector::GetVectorFromTVec(cv::Mat Tvec) {
-    FVector TranslationVector(Tvec.at<float>(2,0), -Tvec.at<float>(0,0), Tvec.at<float>(1,0)); // change it to be like character coordinates:  forward is x, right is y, up is z
+    FVector TranslationVector(Tvec.at<float>(2,0), Tvec.at<float>(0,0), -Tvec.at<float>(1,0)); // change it to be like character coordinates:  forward is x, right is y, up is z
     return TranslationVector * 100; // Aruco is in meters and Unreal in centimeters
 }
 
@@ -232,7 +232,7 @@ FRotator ArucoMarkerDetector::GetMarkerRotatorFromRVec(cv::Mat Rvec) {
 FVector ArucoMarkerDetector::GetPlaneMarkersNormalVector() {
 	FVector Vector12 = PlaneMarker2Translation - PlaneMarker1Translation;
 	FVector Vector13 = PlaneMarker3Translation - PlaneMarker1Translation;
-	FVector NormalVector = FVector::CrossProduct(Vector13, Vector12);
+	FVector NormalVector = FVector::CrossProduct(Vector12, Vector13);
 	NormalVector.Normalize();
 	return NormalVector;
 }

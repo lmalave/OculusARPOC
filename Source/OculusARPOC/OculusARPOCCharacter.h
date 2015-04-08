@@ -49,6 +49,7 @@ class AOculusARPOCCharacter : public ACharacter
 
 	AActor* BoardFollowActor;
 
+
 public:
 	AOculusARPOCCharacter(const FObjectInitializer& ObjectInitializer);
 
@@ -239,16 +240,23 @@ protected:
 
 	FVector GetWorldLocationFromMarkerTranslation(FVector MarkerTranslation);
 
+	FVector GetAdjustedMarkerTranslationMovingAverage(FVector LatestAdjustedMarkerTranslation);
+
 	bool BoardWindowIsSpawned;
 
 	bool ARStarted;
 
 	FVector StartingCharacterLocation;
+	FVector StartingCameraLocation;
+	FVector StartingCameraForwardVector;
 	FVector StartingMarkerTranslation;
 	FRotator StartingMarkerRotation;
 	FVector StartingMarkerLocation;
+	float StartingMarkerDistance;
 	FVector StartingMarkerNormalVector;
 	FTransform StartingMarkerTransform;
+
+	TArray<FVector*> PreviousAdjustedMarkerTranslations; // used to calculate running average
 
 public:
 	/** Returns Mesh1P subobject **/
