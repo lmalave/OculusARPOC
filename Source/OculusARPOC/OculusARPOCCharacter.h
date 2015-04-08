@@ -233,6 +233,8 @@ protected:
 
 	void HandleMarkerActor();
 
+	void HandleMarkerCharacterMovement();
+		
 	FVector LeapPositionToUnrealLocation(Leap::Vector LeapPosition, FVector UnrealOffset);
 
 	FVector GetWorldLocationFromMarkerTranslation(FVector MarkerTranslation);
@@ -240,6 +242,14 @@ protected:
 	bool BoardWindowIsSpawned;
 
 	bool ARStarted;
+
+	FVector StartingCharacterLocation;
+	FVector StartingMarkerTranslation;
+	FRotator StartingMarkerRotation;
+	FVector StartingMarkerLocation;
+	FVector StartingMarkerNormalVector;
+	FTransform StartingMarkerTransform;
+
 public:
 	/** Returns Mesh1P subobject **/
 	FORCEINLINE class USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
