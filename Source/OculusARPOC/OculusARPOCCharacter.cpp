@@ -67,6 +67,10 @@ AOculusARPOCCharacter::AOculusARPOCCharacter(const FObjectInitializer& ObjectIni
 	if (PortalBlueprint.Object){
 		PortalBlueprintClass = (UClass*)PortalBlueprint.Object->GeneratedClass;
 	}
+	static ConstructorHelpers::FObjectFinder<UBlueprint> ChairBlueprint(TEXT("Blueprint'/Game/Blueprints/SM_Chair_Blueprint.SM_Chair_Blueprint'"));
+	if (ChairBlueprint.Object){
+		ChairBlueprintClass = (UClass*)ChairBlueprint.Object->GeneratedClass;
+	}
 	// Create a mesh component that will be used when being viewed from a '1st person' view (when controlling this pawn)
 	BackgroundVideoSurface = ObjectInitializer.CreateDefaultSubobject<UChildActorComponent>(this, TEXT("BackgroundVideoSurface"));
 	BackgroundVideoSurface->AttachParent = FirstPersonCameraComponent;
@@ -93,6 +97,8 @@ AOculusARPOCCharacter::AOculusARPOCCharacter(const FObjectInitializer& ObjectIni
 	ARStarted = false;
 	StartingCharacterLocation = FVector::ZeroVector;
 	StartingMarkerLocation = FVector::ZeroVector;
+
+	PreviousCharacterLocationIndex = -1;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -414,7 +420,7 @@ void AOculusARPOCCharacter::HandleMarkerActor() {
 void AOculusARPOCCharacter::BeginPlay()
 {
 	AVideoDisplaySurface* BackgroundVideoDisplaySurface = (AVideoDisplaySurface*)BackgroundVideoSurface->ChildActor;
-	VideoSource = new OpenCVVideoSource(1, 1280, 720);
+	VideoSource = new OpenCVVideoSource(0, 1280, 720);
 	VideoSource->SetIsCameraUpsideDown(false);
 	VideoSource->Init();
 	
@@ -481,8 +487,14 @@ void AOculusARPOCCharacter::HandleLeap()
 
 FVector AOculusARPOCCharacter::GetWorldLocationFromMarkerTranslation(FVector MarkerTranslation)
 {
-	FVector Location = FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * MarkerTranslation.X + FirstPersonCameraComponent->GetRightVector() * MarkerTranslation.Y + FirstPersonCameraComponent->GetUpVector() * MarkerTranslation.Z;
-	return Location;
+	FVector WorldLocation = FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * MarkerTranslation.X + FirstPersonCameraComponent->GetRightVector() * MarkerTranslation.Y + FirstPersonCameraComponent->GetUpVector() * MarkerTranslation.Z;
+	return WorldLocation;
+}
+
+FVector AOculusARPOCCharacter::GetWorldMarkerNormalVector(FVector MarkerNormalVector)
+{
+	FVector WorldNormalVector = FirstPersonCameraComponent->GetForwardVector() * MarkerNormalVector.X + FirstPersonCameraComponent->GetRightVector() * MarkerNormalVector.Y + FirstPersonCameraComponent->GetUpVector() * MarkerNormalVector.Z;
+	return WorldNormalVector;
 }
 
 void AOculusARPOCCharacter::StartAR()
@@ -504,7 +516,7 @@ void AOculusARPOCCharacter::StartAR()
 		StartingMarkerLocation = DetectedWorldLocation;
 		FVector MarkerNormalVector = MarkerDetector->GetPlaneMarkersNormalVector();
 		StartingMarkerNormalVector = MarkerNormalVector;
-		FVector DetectedWorldNormalVector = FirstPersonCameraComponent->GetForwardVector() * MarkerNormalVector.X + FirstPersonCameraComponent->GetRightVector() * MarkerNormalVector.Y + FirstPersonCameraComponent->GetUpVector() * MarkerNormalVector.Z;
+		FVector DetectedWorldNormalVector = GetWorldMarkerNormalVector(MarkerNormalVector);
 		FRotator DetectedNormalWorldRotation = DetectedWorldNormalVector.Rotation();
 		FTransform DetectedMarkerTransform(DetectedNormalWorldRotation, DetectedWorldLocation, *(new FVector(1.f, 1.f, 1.f)));
 		StartingMarkerTransform = DetectedMarkerTransform;
@@ -535,8 +547,11 @@ void AOculusARPOCCharacter::StartAR()
 		Prop->SetActorRelativeScale3D(FVector(0.50, 0.50, 0.50));
 		BoardFollowActor = Prop;
 		AActor* Portal = this->SpawnActor(PortalBlueprintClass, FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * 30.f - FirstPersonCameraComponent->GetUpVector() * 100.f, FRotator::ZeroRotator);
-		Portal->SetActorRelativeScale3D(FVector(0.5, 0.7, 0.7));
-		BoardFollowActor = Prop;
+		Portal->SetActorRelativeScale3D(FVector(0.5, 0.7   , 0.7));
+		AActor* Chair1 = this->SpawnActor(ChairBlueprintClass, FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * 75.f - FirstPersonCameraComponent->GetRightVector() * 75.f - FirstPersonCameraComponent->GetUpVector() * 64.f, FRotator(0.f, 90.f, 0.f));
+		Chair1->SetActorRelativeScale3D(FVector(0.7, 0.7, 0.7));
+		AActor* Chair2 = this->SpawnActor(ChairBlueprintClass, FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * 75.f + FirstPersonCameraComponent->GetRightVector() * 75.f - FirstPersonCameraComponent->GetUpVector() * 64.f, FRotator(0.f, -90.f, 0.f));
+		Chair2->SetActorRelativeScale3D(FVector(0.7, 0.7, 0.7));
 	}
 }
 
@@ -555,21 +570,29 @@ void AOculusARPOCCharacter::HandleMarkerCharacterMovement()
 		DrawDebugSphere(GetWorld(), PlaneMarker4Location, 0.5, 12, FColor::Magenta);
 		FVector MarkerTranslation = MarkerDetector->GetPlaneMarkersMidpoint();
 		float MarkerDistance = MarkerTranslation.Size();
-		//GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("===========================================MarkerTranslation: ") + MarkerTranslation.ToCompactString());
+		GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("===========================================StartingMarkerTranslation: ") + MarkerTranslation.ToCompactString());
+		GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("===========================================MarkerTranslation: ") + MarkerTranslation.ToCompactString());
 		FVector MarkerLocation = GetWorldLocationFromMarkerTranslation(MarkerTranslation);
 		DrawDebugSphere(GetWorld(), MarkerLocation, 0.5, 12, FColor::Red);
 		FVector MarkerNormalVector = MarkerDetector->GetPlaneMarkersNormalVector();
+		FVector WorldMarkerNormalVector = GetWorldMarkerNormalVector(MarkerNormalVector);
 		FRotator MarkerRotation = MarkerDetector->GetPlaneMarkersRotation();
-		//GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("===========================================MarkerRotation: ") + MarkerRotation.ToCompactString());
-		FVector CylinderEnd = MarkerLocation + FirstPersonCameraComponent->GetForwardVector() * MarkerNormalVector.X + FirstPersonCameraComponent->GetRightVector() * MarkerNormalVector.Y + FirstPersonCameraComponent->GetUpVector() * MarkerNormalVector.Z;
-		FVector CylinderEnd2 = MarkerLocation + FirstPersonCameraComponent->GetForwardVector() * MarkerNormalVector.X * 20.f + FirstPersonCameraComponent->GetRightVector() * MarkerNormalVector.Y * 20.f + FirstPersonCameraComponent->GetUpVector() * MarkerNormalVector.Z * 20.f;
+		FRotator WorldMarkerRotation = WorldMarkerNormalVector.Rotation();
+		FTransform WorldMarkerTransform(WorldMarkerRotation, MarkerLocation, *(new FVector(1.f, 1.f, 1.f)));
+		GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("===========================================MarkerRotation: ") + MarkerRotation.ToCompactString());
+		FVector CylinderEnd = MarkerLocation + WorldMarkerNormalVector;
+		FVector CylinderEnd2 = MarkerLocation + WorldMarkerNormalVector * 20.f;
 		DrawDebugCylinder(GetWorld(), MarkerLocation, CylinderEnd, 15.f, 12, FColor::Cyan);
 		DrawDebugCylinder(GetWorld(), MarkerLocation, CylinderEnd2, 1.f, 12, FColor::Magenta);
-		DrawDebugLine(GetWorld(), FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * 50 + FirstPersonCameraComponent->GetRightVector() * 50, FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * 100 + FirstPersonCameraComponent->GetRightVector() * 100, FColor::Red);
-		DrawDebugLine(GetWorld(), FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * 50 - FirstPersonCameraComponent->GetRightVector() * 50, FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * 100 - FirstPersonCameraComponent->GetRightVector() * 100, FColor::Red);
-		FVector ForwardCylinderEnd = BoardFollowActor->GetActorLocation() + BoardFollowActor->GetActorForwardVector() * 20;
-		FVector RightCylinderEnd = BoardFollowActor->GetActorLocation() + BoardFollowActor->GetActorRightVector() * 20;
-		FVector UpCylinderEnd = BoardFollowActor->GetActorLocation() + BoardFollowActor->GetActorUpVector() * 20;
+		FVector CameraLocation = FirstPersonCameraComponent->GetComponentLocation();
+		FVector CameraLocationInMarkerSpace = WorldMarkerTransform.InverseTransformPositionNoScale(CameraLocation);
+		GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("===========================================CameraLocation: ") + CameraLocation.ToCompactString());
+		GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("===========================================CameraLocationInMarkerSpace: ") + CameraLocationInMarkerSpace.ToCompactString());
+		//DrawDebugLine(GetWorld(), FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * 50 + FirstPersonCameraComponent->GetRightVector() * 50, FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * 100 + FirstPersonCameraComponent->GetRightVector() * 100, FColor::Red);
+		//DrawDebugLine(GetWorld(), FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * 50 - FirstPersonCameraComponent->GetRightVector() * 50, FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector() * 100 - FirstPersonCameraComponent->GetRightVector() * 100, FColor::Red);
+		//FVector ForwardCylinderEnd = BoardFollowActor->GetActorLocation() + BoardFollowActor->GetActorForwardVector() * 20;
+		//FVector RightCylinderEnd = BoardFollowActor->GetActorLocation() + BoardFollowActor->GetActorRightVector() * 20;
+		//FVector UpCylinderEnd = BoardFollowActor->GetActorLocation() + BoardFollowActor->GetActorUpVector() * 20;
 		//DrawDebugCylinder(GetWorld(), BoardFollowActor->GetActorLocation(), ForwardCylinderEnd, 1.f, 12, FColor::Red);
 		//DrawDebugCylinder(GetWorld(), BoardFollowActor->GetActorLocation(), RightCylinderEnd, 1.f, 12, FColor::Green);
 		//DrawDebugCylinder(GetWorld(), BoardFollowActor->GetActorLocation(), UpCylinderEnd, 1.f, 12, FColor::Blue);
@@ -596,8 +619,11 @@ void AOculusARPOCCharacter::HandleMarkerCharacterMovement()
 			FVector MarkerTranslationDelta = StartingMarkerTranslation - MarkerTranslation;
 			FVector MarkerLocationDelta = StartingMarkerLocation - MarkerLocation;
 			//GEngine->AddOnScreenDebugMessage(-1, 50.0f, FColor::Yellow, TEXT("===========================================MarkerTranslationDelta: ") + MarkerTranslationDelta.ToCompactString());
-			FVector NewCharacterLocation = StartingCharacterLocation + StartingCameraForwardVector * (StartingMarkerDistance - MarkerDistance);
-			this->SetActorLocation(NewCharacterLocation);		
+			//FVector NewCharacterLocation = StartingCharacterLocation + StartingCameraForwardVector * (StartingMarkerDistance - MarkerDistance);
+			FVector NewCharacterLocation = BoardFollowActor->GetActorLocation() + BoardFollowActor->GetActorRightVector() * CameraLocationInMarkerSpace.X - BoardFollowActor->GetActorForwardVector() * CameraLocationInMarkerSpace.Y + BoardFollowActor->GetActorUpVector() * CameraLocationInMarkerSpace.Z;
+			NewCharacterLocation.Z = NewCharacterLocation.Z - 64.f;
+			FVector CharacterLocationMovingAverage = this->GetCharacterLocationMovingAverage(NewCharacterLocation);
+			this->SetActorLocation(CharacterLocationMovingAverage);
 			DrawDebugSphere(GetWorld(), MarkerLocation, 0.5, 12, FColor::Red);
 
 			//UNavigationSystem* const NavSys = GetWorld()->GetNavigationSystem();
@@ -621,6 +647,25 @@ FVector AOculusARPOCCharacter::GetAdjustedMarkerTranslationMovingAverage(FVector
 		TotalVector = TotalVector + *(PreviousAdjustedMarkerTranslations[Index]);
 	}
 	return TotalVector / PreviousAdjustedMarkerTranslations.Num();
+}
+
+FVector AOculusARPOCCharacter::GetCharacterLocationMovingAverage(FVector LatestCharacterLocation) {
+	if (PreviousCharacterLocationIndex == -1)
+	{
+		PreviousCharacterLocations.Init(LatestCharacterLocation, 10);
+		PreviousCharacterLocationIndex = 0;
+	}
+	if (PreviousCharacterLocationIndex == 10) {
+		PreviousCharacterLocationIndex = 0;
+	}
+	PreviousCharacterLocations[PreviousCharacterLocationIndex] = LatestCharacterLocation;
+	FVector TotalVector = FVector::ZeroVector;
+	for (int32 Index = 0; Index != PreviousCharacterLocations.Num(); ++Index)
+	{
+		TotalVector = TotalVector + PreviousCharacterLocations[Index];
+	}
+	PreviousCharacterLocationIndex++;
+	return TotalVector / PreviousCharacterLocations.Num();
 }
 
 

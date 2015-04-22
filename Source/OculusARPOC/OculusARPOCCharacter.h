@@ -37,6 +37,8 @@ class AOculusARPOCCharacter : public ACharacter
 
 	UClass* PortalBlueprintClass;
 
+	UClass* ChairBlueprintClass;
+
 	FDateTime LastMarkerSpawnTime;
 
 	IVideoSource* VideoSource;
@@ -240,7 +242,11 @@ protected:
 
 	FVector GetWorldLocationFromMarkerTranslation(FVector MarkerTranslation);
 
+	FVector GetWorldMarkerNormalVector(FVector MarkerNormalVector);
+		
 	FVector GetAdjustedMarkerTranslationMovingAverage(FVector LatestAdjustedMarkerTranslation);
+
+	FVector GetCharacterLocationMovingAverage(FVector LatestCharacterLocation);
 
 	bool BoardWindowIsSpawned;
 
@@ -257,6 +263,9 @@ protected:
 	FTransform StartingMarkerTransform;
 
 	TArray<FVector*> PreviousAdjustedMarkerTranslations; // used to calculate running average
+
+	TArray<FVector> PreviousCharacterLocations; // used to calculate moving average
+	int PreviousCharacterLocationIndex;
 
 public:
 	/** Returns Mesh1P subobject **/
